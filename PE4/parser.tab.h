@@ -58,7 +58,9 @@ extern int yydebug;
     FNUM = 259,                    /* FNUM  */
     ID = 260,                      /* ID  */
     INC = 261,                     /* INC  */
-    DEC = 262                      /* DEC  */
+    DEC = 262,                     /* DEC  */
+    INT_TYPE = 263,                /* INT_TYPE  */
+    FLOAT_TYPE = 264               /* FLOAT_TYPE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -67,17 +69,14 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 89 "parser.y"
+#line 71 "parser.y"
 
     int   num;
     float fnum;
     char *str;
-    struct {
-        float val;
-        int   type;  /* TYPE_INT or TYPE_FLOAT */
-    } expr;
+    struct { float val; int type; } expr;
 
-#line 81 "parser.tab.h"
+#line 80 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

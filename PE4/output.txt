@@ -1,0 +1,13 @@
+Enter input:
+Post-increment: a = 6
+Post-decrement: b = 7
+
+--- Symbol Table ---
+Name       Type     Value
+----------------------------
+a          int      6
+b          int      7
+c          int      9
+d          int      77
+e          float    3.5
+f          float    8.5

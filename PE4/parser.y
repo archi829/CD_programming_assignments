@@ -3,18 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Type constants */
 #define TYPE_INT   0
 #define TYPE_FLOAT 1
 
 struct symbol {
-    char name[10];
-    int  ivalue;
+    char  name[10];
+    int   ivalue;
     float fvalue;
-    int  type;   /* TYPE_INT or TYPE_FLOAT */
+    int   type;
 } symtab[100];
 
 int symcount = 0;
+int current_decl_type;
 
 int lookup(char *name) {
     for(int i = 0; i < symcount; i++)
@@ -23,50 +23,32 @@ int lookup(char *name) {
     return -1;
 }
 
-void insert_int(char *name, int value) {
-    int idx = lookup(name);
-    if(idx == -1) {
+void declare(char *name, int type) {
+    if(lookup(name) == -1) {
         strcpy(symtab[symcount].name, name);
-        symtab[symcount].ivalue = value;
-        symtab[symcount].fvalue = (float)value;
-        symtab[symcount].type   = TYPE_INT;
+        symtab[symcount].ivalue = 0;
+        symtab[symcount].fvalue = 0.0;
+        symtab[symcount].type   = type;
         symcount++;
-    } else {
-        /* type mismatch: existing is float, assigning int — promote to float */
-        if(symtab[idx].type == TYPE_FLOAT) {
-            printf("Warning: Assigning int to float variable '%s', promoting.\n", name);
-            symtab[idx].fvalue = (float)value;
-        } else {
-            symtab[idx].ivalue = value;
-            symtab[idx].fvalue = (float)value;
-            symtab[idx].type   = TYPE_INT;
-        }
     }
 }
 
-void insert_float(char *name, float value) {
+void assign_val(char *name, float val, int val_type) {
     int idx = lookup(name);
     if(idx == -1) {
-        strcpy(symtab[symcount].name, name);
-        symtab[symcount].fvalue = value;
-        symtab[symcount].ivalue = (int)value;
-        symtab[symcount].type   = TYPE_FLOAT;
-        symcount++;
+        printf("Error: Variable '%s' not declared\n", name);
+        return;
+    }
+    if(symtab[idx].type == TYPE_INT && val_type == TYPE_FLOAT) {
+        printf("Warning: Type mismatch -- assigning float to int '%s', truncating.\n", name);
+        symtab[idx].ivalue = (int)val;
+        symtab[idx].fvalue = (float)(int)val;
     } else {
-        /* type mismatch: existing is int, assigning float */
-        if(symtab[idx].type == TYPE_INT) {
-            printf("Warning: Type mismatch — assigning float to int variable '%s', truncating.\n", name);
-            symtab[idx].ivalue = (int)value;
-            symtab[idx].fvalue = value;
-            /* keep type as INT to reflect original declaration */
-        } else {
-            symtab[idx].fvalue = value;
-            symtab[idx].ivalue = (int)value;
-        }
+        symtab[idx].fvalue = val;
+        symtab[idx].ivalue = (int)val;
     }
 }
 
-/* Returns float value of any variable (works for both types) */
 float getval(char *name) {
     int idx = lookup(name);
     if(idx == -1) {
@@ -78,7 +60,7 @@ float getval(char *name) {
 
 int gettype(char *name) {
     int idx = lookup(name);
-    if(idx == -1) return TYPE_INT; /* default */
+    if(idx == -1) return TYPE_INT;
     return symtab[idx].type;
 }
 
@@ -90,16 +72,14 @@ int yylex();
     int   num;
     float fnum;
     char *str;
-    struct {
-        float val;
-        int   type;  /* TYPE_INT or TYPE_FLOAT */
-    } expr;
+    struct { float val; int type; } expr;
 }
 
 %token <num>  NUM
 %token <fnum> FNUM
 %token <str>  ID
 %token INC DEC
+%token INT_TYPE FLOAT_TYPE
 
 %type <expr> expr
 
@@ -108,17 +88,16 @@ int yylex();
 
 %%
 
+program : stmt_list
+        ;
+
 stmt_list : stmt
-          | stmt_list ',' stmt
+          | stmt_list stmt
           ;
 
-stmt : ID '=' expr {
-            if($3.type == TYPE_FLOAT)
-                insert_float($1, $3.val);
-            else
-                insert_int($1, (int)$3.val);
-       }
-     | ID INC {
+stmt : INT_TYPE   { current_decl_type = TYPE_INT;   } decl_list ';'
+     | FLOAT_TYPE { current_decl_type = TYPE_FLOAT; } decl_list ';'
+     | ID INC ';' {
             int idx = lookup($1);
             if(idx == -1) {
                 printf("Error: Variable '%s' not declared\n", $1);
@@ -126,14 +105,14 @@ stmt : ID '=' expr {
                 if(symtab[idx].type == TYPE_FLOAT)
                     symtab[idx].fvalue += 1.0;
                 else {
-                    symtab[idx].ivalue += 1;
+                    symtab[idx].ivalue++;
                     symtab[idx].fvalue = (float)symtab[idx].ivalue;
                 }
-                printf("Post-increment: %s is now %g\n", $1,
-                    (symtab[idx].type == TYPE_FLOAT) ? symtab[idx].fvalue : (float)symtab[idx].ivalue);
+                printf("Post-increment: %s = %g\n", $1,
+                    (symtab[idx].type==TYPE_FLOAT) ? symtab[idx].fvalue : (float)symtab[idx].ivalue);
             }
        }
-     | ID DEC {
+     | ID DEC ';' {
             int idx = lookup($1);
             if(idx == -1) {
                 printf("Error: Variable '%s' not declared\n", $1);
@@ -141,38 +120,50 @@ stmt : ID '=' expr {
                 if(symtab[idx].type == TYPE_FLOAT)
                     symtab[idx].fvalue -= 1.0;
                 else {
-                    symtab[idx].ivalue -= 1;
+                    symtab[idx].ivalue--;
                     symtab[idx].fvalue = (float)symtab[idx].ivalue;
                 }
-                printf("Post-decrement: %s is now %g\n", $1,
-                    (symtab[idx].type == TYPE_FLOAT) ? symtab[idx].fvalue : (float)symtab[idx].ivalue);
+                printf("Post-decrement: %s = %g\n", $1,
+                    (symtab[idx].type==TYPE_FLOAT) ? symtab[idx].fvalue : (float)symtab[idx].ivalue);
             }
        }
      ;
 
+decl_list : decl_item
+          | decl_list ',' decl_item
+          ;
+
+decl_item : ID '=' expr {
+                declare($1, current_decl_type);
+                assign_val($1, $3.val, $3.type);
+            }
+          | ID {
+                declare($1, current_decl_type);
+            }
+          ;
+
 expr : expr '+' expr {
-            $$.type = ($1.type == TYPE_FLOAT || $3.type == TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
+            $$.type = ($1.type==TYPE_FLOAT || $3.type==TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
             $$.val  = $1.val + $3.val;
        }
      | expr '-' expr {
-            $$.type = ($1.type == TYPE_FLOAT || $3.type == TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
+            $$.type = ($1.type==TYPE_FLOAT || $3.type==TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
             $$.val  = $1.val - $3.val;
        }
      | expr '*' expr {
-            $$.type = ($1.type == TYPE_FLOAT || $3.type == TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
+            $$.type = ($1.type==TYPE_FLOAT || $3.type==TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
             $$.val  = $1.val * $3.val;
        }
      | expr '/' expr {
             if($3.val == 0) {
                 printf("Error: Division by zero\n");
-                $$.val  = 0;
-                $$.type = TYPE_INT;
+                $$.val = 0; $$.type = TYPE_INT;
             } else {
-                $$.type = TYPE_FLOAT; /* division always yields float */
+                $$.type = TYPE_FLOAT;
                 $$.val  = $1.val / $3.val;
             }
        }
-     | NUM  { $$.val = (float)$1; $$.type = TYPE_INT; }
+     | NUM  { $$.val = (float)$1; $$.type = TYPE_INT;   }
      | FNUM { $$.val = $1;        $$.type = TYPE_FLOAT; }
      | ID   { $$.val = getval($1); $$.type = gettype($1); }
      ;
@@ -192,9 +183,9 @@ int main() {
     printf("----------------------------\n");
     for(int i = 0; i < symcount; i++) {
         if(symtab[i].type == TYPE_FLOAT)
-            printf("%-10s %-8s %g\n", symtab[i].name, "float", symtab[i].fvalue);
+            printf("%-10s %-8s %g\n",  symtab[i].name, "float", symtab[i].fvalue);
         else
-            printf("%-10s %-8s %d\n", symtab[i].name, "int", symtab[i].ivalue);
+            printf("%-10s %-8s %d\n",  symtab[i].name, "int",   symtab[i].ivalue);
     }
     return 0;
 }
