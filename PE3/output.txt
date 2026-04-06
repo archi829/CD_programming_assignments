@@ -1,0 +1,18 @@
+
+Symbol Table:
+Name            Kind         Type       Storage    Size   Scope   Line 
+--------------- ------------ ---------- ---------- ------ ------- -----
+a               variable     int        auto       4      0       1    
+b               variable     int        auto       4      0       1    
+x               variable     float      auto       4      0       2    
+c               variable     char       auto       1      0       3    
+counter         variable     int        static     4      0       5    
+threshold       variable     float      extern     4      0       6    
+add             function     int        extern     0      0       8    
+p               parameter    int        auto       4      1       8    
+q               parameter    int        auto       4      1       8    
+result          variable     int        auto       4      2       9    
+reset           function     void       auto       0      0       14   
+flag            parameter    char       auto       1      1       14   
+i               variable     int        auto       4      2       15   
+temp            variable     int        auto       4      3       17   

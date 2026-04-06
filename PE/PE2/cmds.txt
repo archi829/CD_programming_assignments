@@ -1,7 +1,0 @@
-archi8@DESKTOP-K8U7KHN:/mnt/c/Users/Asus/Desktop/PESU/CD/pes/PE2$ bison -d  parser.y
-archi8@DESKTOP-K8U7KHN:/mnt/c/Users/Asus/Desktop/PESU/CD/pes/PE2$ flex lexer.l
-archi8@DESKTOP-K8U7KHN:/mnt/c/Users/Asus/Desktop/PESU/CD/pes/PE2$ gcc parser.tab.c lex.yy.c -o parser
-archi8@DESKTOP-K8U7KHN:/mnt/c/Users/Asus/Desktop/PESU/CD/pes/PE2$ ./parser input.c
-Syntax error at line 2, token 'float': syntax error
-
-Error propagated to line 2 cuz of Panick mode error recovery

@@ -1,3 +1,0 @@
-in wsl
-
-yacc -d expr.y

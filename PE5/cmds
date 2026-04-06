@@ -1,0 +1,4 @@
+bison -d parser.y        # generates parser.tab.c and parser.tab.h
+flex lexer.l             # generates lex.yy.c
+gcc parser.tab.c lex.yy.c -o ast -lfl   # links flex lib for yywrap
+./ast < input.txt > output.txt        # run with input
